@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: 构建与测试 (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: 构建
+        run: go build ./...
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: 测试
+        # Linux 上额外开启竞态检测(需要 cgo)
+        run: go test ${{ matrix.os == 'ubuntu-latest' && '-race' || '' }} -cover ./...
+
+      - name: 基准测试冒烟(每个只跑一次,确认能正常运行)
+        run: go test -run '^$' -bench . -benchtime 1x .
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
+
+  fuzz:
+    name: 模糊测试冒烟
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: FuzzYAMLToJSON
+        run: go test -run '^$' -fuzz '^FuzzYAMLToJSON$' -fuzztime 20s -fuzzminimizetime 2s .
+      - name: FuzzJSONToYAML
+        run: go test -run '^$' -fuzz '^FuzzJSONToYAML$' -fuzztime 20s -fuzzminimizetime 2s .

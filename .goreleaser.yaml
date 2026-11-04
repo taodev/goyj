@@ -1,0 +1,61 @@
+# goreleaser 配置,文档:https://goreleaser.com
+version: 2
+
+project_name: goyj
+
+builds:
+  - id: goyj
+    main: ./cmd/goyj
+    binary: goyj
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      # main.version 在 cmd/goyj/main.go 中定义,供 --version 输出
+      - -s -w -X main.version={{ .Version }}
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+# Scoop(Windows 包管理器):每次发版自动更新 taodev/scoop-bucket 中的 goyj.json。
+scoops:
+  - name: goyj # manifest 文件名即 goyj.json
+    repository:
+      owner: taodev
+      name: scoop-bucket
+      # 具有该仓库写权限的 token,从环境变量读取,不写入代码仓库。
+      token: "{{ .Env.SCOOP_BUCKET_TOKEN }}"
+    homepage: https://github.com/taodev/goyj
+    description: 在 YAML 与 JSON 之间互相转换的命令行工具
+    license: MIT
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"

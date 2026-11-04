@@ -1,0 +1,16 @@
+version: "2"
+
+linters:
+  # standard 包含 errcheck、govet、ineffassign、staticcheck、unused
+  default: standard
+  enable:
+    - misspell
+    - unconvert
+  exclusions:
+    presets:
+      # 忽略对 fmt.Fprintf、Close 等常见调用的返回值检查
+      - std-error-handling
+
+formatters:
+  enable:
+    - gofmt

@@ -1,0 +1,37 @@
+name: Release
+
+# 推送形如 v1.2.3 的标签时发布:构建多平台二进制、创建 GitHub Release、
+# 更新 Scoop bucket。
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # 创建 Release
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # goreleaser 需要完整历史来生成 changelog
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: 先跑测试,失败则不发布
+        run: go test ./...
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 对 taodev/scoop-bucket 有写权限的 token,需在仓库 Settings → Secrets 中配置,
+          # 不得写入代码仓库。
+          SCOOP_BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
